@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>알바수첩 - 근무 달력</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#111111" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="stylesheet" href="css/style.css" />
+<style>
+  .calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .calendar-header button {
+    padding: 8px 16px;
+    background: #000;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .calendar-header h2 {
+    margin: 0;
+    font-size: 20px;
+  }
+
+  .calendar-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+  }
+
+  .calendar-table th {
+    background: #f0f0f0;
+    padding: 12px;
+    text-align: center;
+    font-weight: 600;
+    border-bottom: 2px solid #000;
+  }
+
+  .calendar-table td {
+    border: 1px solid #ddd;
+    padding: 12px;
+    height: 100px;
+    vertical-align: top;
+    background: #fff;
+    position: relative;
+  }
+
+  .calendar-table td.other-month {
+    background: #f9f9f9;
+    color: #999;
+  }
+
+  .calendar-date {
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #000;
+  }
+
+  .calendar-workers {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .worker-planned {
+    color: #ff4444;
+  }
+
+  .worker-completed {
+    color: #000;
+  }
+
+  .worker-item {
+    margin: 2px 0;
+    word-break: break-word;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <h1>근무 달력</h1>
+      <a href="home.html"><button class="btn-link">닫기</button></a>
+    </div>
+
+    <div class="calendar-header">
+      <button onclick="previousMonth()">← 이전</button>
+      <h2 id="monthTitle"></h2>
+      <button onclick="nextMonth()">다음 →</button>
+    </div>
+
+    <table class="calendar-table">
+      <thead>
+        <tr>
+          <th>일</th>
+          <th>월</th>
+          <th>화</th>
+          <th>수</th>
+          <th>목</th>
+          <th>금</th>
+          <th>토</th>
+        </tr>
+      </thead>
+      <tbody id="calendarBody">
+      </tbody>
+    </table>
+  </div>
+
+  <nav class="bottom-nav">
+    <a href="home.html">홈</a>
+    <a href="schedule.html">근무표</a>
+    <a href="calendar.html" class="active">달력</a>
+    <a href="my-pay.html">알바비</a>
+  </nav>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    let currentDate = new Date();
+    let schedules = {};
+
+    requireLogin(async () => {
+      await loadSchedules();
+      renderCalendar();
+    });
+
+    async function loadSchedules() {
+      const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+      const startDate = toDateStr(firstDay);
+      const endDate = toDateStr(lastDay);
+
+      const snap = await db
+        .collection("schedules")
+        .where("date", ">=", startDate)
+        .where("date", "<=", endDate)
+        .get();
+
+      schedules = {};
+      snap.forEach((doc) => {
+        const s = doc.data();
+        if (!schedules[s.date]) {
+          schedules[s.date] = [];
+        }
+        schedules[s.date].push(s);
+      });
+    }
+
+    function renderCalendar() {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+
+      // 월 제목 업데이트
+      const monthNames = [
+        "1월", "2월", "3월", "4월", "5월", "6월",
+        "7월", "8월", "9월", "10월", "11월", "12월"
+      ];
+      document.getElementById("monthTitle").textContent = `${year}년 ${monthNames[month]}`;
+
+      // 첫 날과 마지막 날
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const startDate = firstDay.getDay(); // 0 = 일요일
+      const daysInMonth = lastDay.getDate();
+
+      // 이전 달 날짜
+      const prevLastDay = new Date(year, month, 0).getDate();
+
+      let html = "";
+      let dateNum = 1;
+      let nextMonthNum = 1;
+
+      // 6주 * 7일 = 42칸
+      for (let week = 0; week < 6; week++) {
+        for (let day = 0; day < 7; day++) {
+          const cellNum = week * 7 + day;
+
+          if (cellNum < startDate) {
+            // 이전 달
+            const date = prevLastDay - (startDate - cellNum - 1);
+            html += `<td class="other-month"><div class="calendar-date">${date}</div></td>`;
+          } else if (dateNum <= daysInMonth) {
+            // 현재 달
+            const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(dateNum).padStart(2, "0")}`;
+            const dayWorkers = (schedules[dateStr] || []).sort((a, b) => {
+              const orderA = a.workerDisplayOrder || 999;
+              const orderB = b.workerDisplayOrder || 999;
+              // workerDisplayOrder가 같으면 이름순으로 정렬
+              if (orderA === orderB) {
+                return (a.workerName || a.workerUsername).localeCompare(b.workerName || b.workerUsername, 'ko');
+              }
+              return orderA - orderB;
+            });
+
+            html += `<td>
+              <div class="calendar-date">${dateNum}</div>
+              <div class="calendar-workers">`;
+
+            dayWorkers.forEach((s) => {
+              const workerName = s.workerName || s.workerUsername;
+              const statusClass = s.status === "planned" ? "worker-planned" : "worker-completed";
+              html += `<div class="worker-item ${statusClass}">${workerName}</div>`;
+            });
+
+            html += `</div></td>`;
+            dateNum++;
+          } else {
+            // 다음 달
+            html += `<td class="other-month"><div class="calendar-date">${nextMonthNum}</div></td>`;
+            nextMonthNum++;
+          }
+        }
+        html += "</tr><tr>";
+      }
+
+      document.getElementById("calendarBody").innerHTML = `<tr>${html}</tr>`;
+    }
+
+    async function previousMonth() {
+      currentDate.setMonth(currentDate.getMonth() - 1);
+      await loadSchedules();
+      renderCalendar();
+    }
+
+    async function nextMonth() {
+      currentDate.setMonth(currentDate.getMonth() + 1);
+      await loadSchedules();
+      renderCalendar();
+    }
+  </script>
+</body>
+</html>

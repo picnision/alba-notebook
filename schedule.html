@@ -16,7 +16,7 @@
       <button class="btn-link" onclick="logout()">로그아웃</button>
     </div>
 
-    <p class="hint" style="margin-bottom:16px;">모든 근무자가 함께 볼 수 있어요. (알바비 금액은 표시되지 않습니다)</p>
+    <p class="hint" style="margin-bottom:16px;">모든 근무자가 함께 볼 수 있어요.</p>
 
     <div id="adminAddWrap" style="display:none; margin-bottom:16px;">
       <a href="shift-form.html"><button class="btn-primary">+ 근무 기록 추가</button></a>
@@ -55,15 +55,26 @@
         return;
       }
 
+      // payroll 데이터도 함께 가져오기
+      const payrollSnap = await db.collection("payroll").get();
+      const payrollMap = {};
+      payrollSnap.forEach((doc) => {
+        payrollMap[doc.id] = doc.data();
+      });
+
       let html = `<div class="card">`;
       snap.forEach((doc) => {
         const s = doc.data();
+        const p = payrollMap[doc.id]; // 같은 ID로 payroll 데이터 찾기
+        const totalPay = p ? p.totalPay : 0;
+
         html += `
           <div class="shift-item">
             <div class="shift-date">${formatDateKr(s.date)}</div>
             <div class="shift-main">
               <div class="shift-worker">${escapeHtml(s.workerName)}</div>
-              <div class="shift-time">${s.startTime} ~ ${s.endTime}${s.memo ? " · " + escapeHtml(s.memo) : ""}</div>
+              <div class="shift-time">${s.startTime && s.endTime ? s.startTime + " ~ " + s.endTime : "(예정)"}${s.memo ? " · " + escapeHtml(s.memo) : ""}</div>
+              ${totalPay > 0 ? `<div style="margin-top:6px; font-weight:600; color:#111;">${formatWon(totalPay)}</div>` : ""}
             </div>
             ${
               currentIsAdmin

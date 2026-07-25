@@ -41,7 +41,7 @@
 
     <div id="pagination" style="display:flex; justify-content:center; align-items:center; gap:12px; margin-top:20px; padding-bottom:20px;">
       <button class="btn-outline" onclick="previousPage()" id="prevBtn">← 이전</button>
-      <span id="pageInfo" style="font-weight:600;">1 / 1</span>
+      <span id="pageInfo" style="font-weight:600; min-width:60px; text-align:center; white-space:nowrap;">1 / 1</span>
       <button class="btn-outline" onclick="nextPage()" id="nextBtn">다음 →</button>
     </div>
   </div>
@@ -60,6 +60,7 @@
   <script src="js/app.js"></script>
   <script>
     let currentIsAdmin = false;
+    let currentUsername = "";
     let allSchedules = [];
     let payrollMap = {};
     let currentPage = 1;
@@ -67,6 +68,7 @@
 
     requireLogin(async (profile) => {
       currentIsAdmin = isAdminUsername(profile.username);
+      currentUsername = profile.username;
       if (currentIsAdmin) document.getElementById("adminAddWrap").style.display = "block";
       await loadSchedules();
     });
@@ -87,10 +89,14 @@
         payrollMap[doc.id] = doc.data();
       });
 
-      // 모든 데이터 배열에 저장
+      // 모든 데이터 배열에 저장 (비관리자는 본인 데이터만)
       allSchedules = [];
       snap.forEach((doc) => {
-        allSchedules.push({ id: doc.id, ...doc.data() });
+        const s = doc.data();
+        // 관리자이거나, 비관리자인데 본인 데이터면 추가
+        if (currentIsAdmin || s.workerName === currentUsername) {
+          allSchedules.push({ id: doc.id, ...s });
+        }
       });
 
       currentPage = 1;

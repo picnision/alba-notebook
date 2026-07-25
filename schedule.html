@@ -118,8 +118,9 @@
             <td style="padding:12px; text-align:center; border-right:1px solid #eee;">${timeDisplay}</td>
             <td style="padding:12px; text-align:center; font-weight:600; color:#111; border-right:1px solid #eee;">${totalPay > 0 ? formatWon(totalPay) : "-"}</td>
             <td style="padding:12px; text-align:center;">
-              ${s.memo ? `<span style="font-size:12px; color:#666;">${escapeHtml(s.memo)}</span>` : "-"}
-              ${currentIsAdmin ? `<br/><a href="shift-form.html?id=${doc.id}" style="font-size:12px; color:#0066cc;">수정</a>` : ""}
+              ${s.memo ? `<span style="font-size:12px; color:#666;">${escapeHtml(s.memo)}</span>` : ""}
+              ${s.memo && currentIsAdmin ? `<br/>` : ""}
+              ${currentIsAdmin ? `<a href="shift-form.html?id=${doc.id}" style="font-size:12px; color:#0066cc;">수정</a>` : ""}
             </td>
           </tr>
         `;

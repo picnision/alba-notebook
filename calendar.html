@@ -67,6 +67,9 @@
   .calendar-workers {
     font-size: 12px;
     line-height: 1.5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
   }
 
   .worker-planned {
@@ -78,8 +81,32 @@
   }
 
   .worker-item {
-    margin: 2px 0;
+    margin: 0;
     word-break: break-word;
+    white-space: nowrap;
+    display: inline;
+  }
+
+  /* 모바일 최적화 */
+  @media (max-width: 768px) {
+    .calendar-table td {
+      height: 80px;
+      padding: 8px;
+    }
+
+    .calendar-date {
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .calendar-workers {
+      font-size: 11px;
+      line-height: 1.3;
+    }
+
+    .worker-item {
+      font-size: 11px;
+    }
   }
 </style>
 </head>
@@ -208,9 +235,9 @@
               <div class="calendar-workers">`;
 
             dayWorkers.forEach((s) => {
-              const workerName = s.workerName || s.workerUsername;
+              const displayName = s.displayName || s.workerName || s.workerUsername;
               const statusClass = s.status === "planned" ? "worker-planned" : "worker-completed";
-              html += `<div class="worker-item ${statusClass}">${workerName}</div>`;
+              html += `<div class="worker-item ${statusClass}">${displayName}</div>`;
             });
 
             html += `</div></td>`;
